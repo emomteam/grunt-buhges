@@ -30,20 +30,10 @@ module.exports = function(grunt) {
 
     // Configuration to be run (and then tested).
     buhges: {
-      default_options: {
+      main: {
         options: {
-        },
-        files: {
-          'tmp/default_options': ['test/fixtures/testing', 'test/fixtures/123']
-        }
-      },
-      custom_options: {
-        options: {
-          separator: ': ',
-          punctuation: ' !!!'
-        },
-        files: {
-          'tmp/custom_options': ['test/fixtures/testing', 'test/fixtures/123']
+          src: 'test/src',
+          dist: 'tmp'
         }
       }
     },

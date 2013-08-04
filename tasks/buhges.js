@@ -8,6 +8,8 @@
 
 'use strict';
 
+
+
 module.exports = function(grunt) {
 
   // Please see the Grunt documentation for more information regarding task
@@ -15,36 +17,103 @@ module.exports = function(grunt) {
 
   grunt.registerMultiTask('buhges', 'Your task description goes here.', function() {
     // Merge task-specific and/or target-specific options with these defaults.
+    var hogan = require('hogan.js'), fs = require('fs');
     var options = this.options({
-      punctuation: '.',
-      separator: ', '
+      src: '.',
+      dist: '.',
+      save_snippet: false
     });
 
-    // Iterate over all specified file groups.
-    this.files.forEach(function(f) {
-      // Concat specified files.
-      var src = f.src.filter(function(filepath) {
-        // Warn on and remove invalid source files (if nonull was set).
-        if (!grunt.file.exists(filepath)) {
-          grunt.log.warn('Source file "' + filepath + '" not found.');
-          return false;
-        } else {
-          return true;
+    var context = {}, snippets;
+    var snippets_path = options.src + '/snippets/';
+    var layouts_path = options.src + '/layouts/';
+    var pages_path = options.src + '/pages/';
+
+    // retrieve layouts
+    fs.readdirSync(layouts_path).forEach(function (layout) {
+
+      if (!layout.match(/\.hbs$/)) {
+        return;
+      }
+
+      var page_layout = fs.readFileSync(layouts_path + layout, 'utf-8');
+      layout = layout.replace(/\.hbs/, '');
+
+      // retrieve pages
+      fs.readdirSync(pages_path + layout).forEach(function (page) {
+
+        if (!page.match(/\.hbs$/)) {
+          return;
         }
-      }).map(function(filepath) {
-        // Read file source.
-        return grunt.file.read(filepath);
-      }).join(grunt.util.normalizelf(options.separator));
 
-      // Handle options.
-      src += options.punctuation;
+        var page_template = fs.readFileSync(pages_path + layout + '/' + page, 'utf-8'), page_name = page.replace(/\.hbs/, '');
 
-      // Write the destination file.
-      grunt.file.write(f.dest, src);
+        context.title = page_name;
+        context.active = page_name;
 
-      // Print a success message.
-      grunt.log.writeln('File "' + f.dest + '" created.');
+        if(!snippets) {
+          snippets = getSnippets(snippets_path, page_name, true);
+        }
+
+        var content = hogan.compile(page_template);
+        snippets.content = content.render(context, snippets);
+
+        page = hogan.compile(page_layout);
+        page = page.render(context, snippets);
+
+        //fs.writeFileSync(options.dist  + '/' + page_name + '.html', page, 'utf-8');
+        // Write the destination file.
+        grunt.file.write(options.dist  + '/' + page_name + '.html', page, 'utf-8');
+      });
     });
+
+    function getSnippets (snippets_path, page_active, snippets_in_snippet) {
+
+      var snippets = {};
+
+      // retrieve main name snippet
+      fs.readdirSync(snippets_path).forEach(function (snippet) {
+
+        // retrieve snippet
+        fs.readdirSync(snippets_path + snippet).forEach(function (file_snippet) {
+
+          if (!file_snippet.match(/\.hbs$/) && !file_snippet.match(/\.html$/)) {
+            return;
+          }
+
+          var name = file_snippet.replace(/\.hbs/, '').replace(/\.html/, '');
+          var snippet_path = snippets_path + snippet + '/';
+          var template_src = fs.readFileSync(snippet_path + file_snippet, 'utf-8'), data = {};
+
+          if (fs.existsSync(snippet_path + 'data/'  + name + '.json')) {
+            data = JSON.parse(fs.readFileSync(snippet_path + 'data/' + name + '.json', 'utf-8'));
+          }
+
+          data.active = page_active;
+
+          if(snippet !== name) {
+            name = snippet + '_' + name;
+          }
+
+          var template = hogan.compile(template_src);
+
+          if(snippets_in_snippet) {
+            var snippets_in = getSnippets(snippets_path, page_active, false);
+            snippets[name] =  template.render(data, snippets_in);
+          } else {
+            snippets[name] =  template.render(data);
+          }
+
+          if(options.save_snippet && file_snippet.match(/\.hbs$/)) {
+            fs.writeFileSync(snippet_path  + file_snippet.replace(/\.hbs/, '') + '.html', snippets[name], 'utf-8');
+          }
+
+        });
+      });
+
+      return snippets;
+    }
   });
 
 };
+

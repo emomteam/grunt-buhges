@@ -20,6 +20,9 @@
       "url": "/blob/master/LICENSE-MIT"
     }
   ],
+  "dependencies": {
+    "hogan.js": "~2.0.0"
+  },
   "main": "Gruntfile.js",
   "engines": {
     "node": ">= 0.8.0"
@@ -37,6 +40,10 @@
     "grunt": "~0.4.1"
   },
   "keywords": [
-    "gruntplugin"
+    "gruntplugin",
+    "handlebars",
+    "mustache",
+    "template",
+    "tool"
   ]
 }
